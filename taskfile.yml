@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  goose-up:
+    dir: sql/schema
+    cmds:
+      - goose postgres "postgres://rameez:@localhost:5432/blogator" up
+
+  goose-down:
+    dir: sql/schema
+    cmds:
+      - goose postgres "postgres://rameez:@localhost:5432/blogator" down
+
+  sqlc-gen:
+    cmds:
+      - sqlc generate
+  
