@@ -48,6 +48,18 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 	return i, err
 }
 
+const feedIdExists = `-- name: FeedIdExists :one
+SELECT id
+FROM feeds
+WHERE id = $1
+`
+
+func (q *Queries) FeedIdExists(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, feedIdExists, id)
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getAllFeeds = `-- name: GetAllFeeds :many
 SELECT id, created_at, updated_at, name, url, user_id
 FROM feeds

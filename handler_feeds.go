@@ -25,9 +25,6 @@ func (cfg apiConfig) handlerFeedsCreate(w http.ResponseWriter, r *http.Request, 
 
 	id := uuid.New()
 	currentTime := time.Now().UTC()
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't generate api key")
-	}
 
 	feed, err := cfg.DB.CreateFeed(r.Context(), database.CreateFeedParams{
 		ID:        id,
@@ -43,12 +40,34 @@ func (cfg apiConfig) handlerFeedsCreate(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, databaseFeedToFeed(feed))
+	feedFollowId := uuid.New()
+	feedFollowIdTime := time.Now().UTC()
+
+	feedFollow, err := cfg.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
+		ID:        feedFollowId,
+		CreatedAt: feedFollowIdTime,
+		UpdatedAt: feedFollowIdTime,
+		FeedID:    feed.ID,
+		UserID:    user.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create feed follow")
+		return
+	}
+
+	type response struct {
+		Feed       Feed       `json:"feed"`
+		FeedFollow FeedFollow `json:"feed_follow"`
+	}
+
+	respondWithJSON(w, http.StatusCreated, response{
+		Feed:       databaseFeedToFeed(feed),
+		FeedFollow: databaseFeedFollowToFeedFollow(feedFollow),
+	})
 
 }
 
 func (cfg apiConfig) handlerAllFeedsGet(w http.ResponseWriter, r *http.Request) {
-	// create sql to retrieve all feeds and call and respond with a list of feeds
 	feeds, err := cfg.DB.GetAllFeeds(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve the feed")

@@ -6,3 +6,8 @@ RETURNING *;
 -- name: GetAllFeeds :many
 SELECT id, created_at, updated_at, name, url, user_id
 FROM feeds;
+
+-- name: FeedIdExists :one
+SELECT id
+FROM feeds
+WHERE id = $1;
