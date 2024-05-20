@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rxmeez/go-blog-agg/internal/database"
 )
 
@@ -87,7 +89,41 @@ func StartScraping(ctx context.Context, db *database.Queries, interval time.Dura
 					}
 
 					for _, item := range rss.Channel.Items {
-						fmt.Println("Title:", item.Title)
+						var description sql.NullString
+						if item.Description != "" {
+							description.String = item.Description
+							description.Valid = true
+						}
+
+						pubDate, err := time.Parse(time.RFC1123Z, item.PubDate)
+						if err != nil {
+							pubDate, err = time.Parse(time.RFC1123, item.PubDate)
+							if err != nil {
+								fmt.Println("Error parsing pubDate:", err)
+								return
+							}
+						}
+
+						post, err := db.CreatePost(ctx, database.CreatePostParams{
+							ID:          uuid.New(),
+							CreatedAt:   time.Now().UTC(),
+							UpdatedAt:   time.Now().UTC(),
+							Title:       item.Title,
+							Url:         item.Link,
+							Description: description,
+							PublishedAt: pubDate,
+							FeedID:      feed.ID,
+						})
+
+						if err != nil {
+							if err.Error() == "pq: duplicate key value violates unique constraint \"posts_url_key\"" {
+								continue
+							} else {
+								fmt.Println("Error saving post to database:", err)
+							}
+						}
+
+						fmt.Println("Saved post to database:", post.Url)
 					}
 				}(feed)
 			}
