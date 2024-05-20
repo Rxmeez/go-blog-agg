@@ -1,16 +1,19 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 
 	_ "github.com/lib/pq"
 
 	"github.com/rxmeez/go-blog-agg/internal/database"
+	"github.com/rxmeez/go-blog-agg/internal/scraper"
 )
 
 type apiConfig struct {
@@ -63,6 +66,11 @@ func main() {
 		Addr:    ":" + port,
 		Handler: mux,
 	}
+
+	ctx := context.Background()
+	const collectionConcurrency = 10
+	const collectionInterval = time.Minute
+	go scraper.StartScraping(ctx, dbQueries, collectionInterval, collectionConcurrency)
 
 	log.Printf("Serving from %s on port: %s\n", server.Addr, port)
 	log.Fatal(server.ListenAndServe())
